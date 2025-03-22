@@ -103,7 +103,7 @@ module QRest
     (0...8).each do |i|
       EXP_TABLE.push 1 << i
     end
-    (8...256).each do |i|
+    (8...255).each do |i|
       EXP_TABLE.push EXP_TABLE[i-4] ^ EXP_TABLE[i-5] ^ EXP_TABLE[i-6] ^ EXP_TABLE[i-8]
     end
 
@@ -118,14 +118,11 @@ module QRest
     class <<self
 
       def glog n
-        n >= 1 or raise Error, "Internal error: glog(#{n})."
-        LOG_TABLE[n]
+        LOG_TABLE[n] or raise ArgumentError, "Argument is out of domain: glog(#{n})."
       end
 
       def gexp n
-        while n <  0   do n += 255 end
-        while n >= 256 do n -= 255 end
-        EXP_TABLE[n]
+        EXP_TABLE[n % 255]
       end
 
     end

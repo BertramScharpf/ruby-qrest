@@ -271,7 +271,8 @@ module QRest
     def walk_fields mask_pattern
       # An image says more than a thousand statements:
       # <https://en.wikipedia.org/wiki/QR_code#Message_placement>
-      mp = MASK_PATTERNS[ mask_pattern] or raise ArgumentError, "Bad mask_pattern: #{mask_pattern}"
+      mp = MASK_PATTERNS[ mask_pattern] or
+        raise ArgumentError, "Bad mask_pattern: #{mask_pattern}"
       row = c2 = @fields.size - 1
       inc = -1
       loop do
