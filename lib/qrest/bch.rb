@@ -34,19 +34,19 @@ module QRest
     class <<self
 
       def format_info data
-        d = data << 10
+        d = e = data << 10
         until (m = (digit d) - G15D) < 0 do
           d ^= G15 << m
         end
-        ((data << 10) | d) ^ G15_MASK
+        (e | d) ^ G15_MASK
       end
 
       def version data
-        d = data << 12
+        d = e = data << 12
         until (m = (digit d) - G18D) < 0 do
           d ^= G18 << m
         end
-        (data << 12) | d
+        e | d
       end
 
     end
