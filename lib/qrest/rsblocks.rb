@@ -46,8 +46,9 @@ module QRest
       each do |rs|
         p = Polynomial.new buffer[ i, rs.data_count]
         i += rs.data_count
-        dcdata.push p.num
-        ecdata.push (p.error_mod rs.error_count).num
+        dcdata.push p.num.dup
+        p.error_mod! rs.error_count
+        ecdata.push p.num
       end
       data = []
       (max :data_count).times do |j|

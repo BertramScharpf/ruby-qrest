@@ -18,7 +18,7 @@ module QRest
           if error_correct_length > 0 then
             e = error_correct_length - 1
             ge = new [1, 0]
-            ge.gexp! 1, e
+            ge.gfexp! 1, e
             (error_correct e).multiply ge
           else
             new [1]
@@ -57,55 +57,61 @@ module QRest
       @num.unshift 0 until @num.length >= n
     end
 
-    def first_glog
-      Polynomial.glog @num.first
+    def first_gflog
+      Polynomial.gflog @num.first
     end
 
-    def each_glog
+    def each_gflog
       @num.each_with_index { |n,i|
-        yield (Polynomial.glog n), i
+        yield (Polynomial.gflog n), i
       }
     end
 
-    def gexp! i, n
-      @num[ i] ^= Polynomial.gexp n
+    def gfexp! i, n
+      @num[ i] ^= Polynomial.gfexp n
     end
 
     def multiply e
       r = Polynomial.zeroes length + e.length - 1
-      each_glog { |gi,i|
-        e.each_glog { |gj,j|
-          r.gexp! i + j, gi + gj
+      each_gflog { |gi,i|
+        e.each_gflog { |gj,j|
+          r.gfexp! i + j, gi + gj
         }
       }
       r
     end
 
     def error_mod error_count
-      e = Polynomial.error_correct error_count
-      ef = e.first_glog
       p = dup
-      p.extend! error_count
+      p.error_mod! error_count
+    end
+
+    def error_mod! error_count
+      e = Polynomial.error_correct error_count
+      extend! error_count
       loop do
-        p.norm!
-        break if p.length < e.length
-        ratio = p.first_glog - ef
-        e.each_glog { |gi,i|
-          p.gexp! i, ratio + gi
+        norm!
+        break if length < e.length
+        f = first_gflog
+        e.each_gflog { |gi,i|
+          gfexp! i, gi + f
         }
       end
-      p.grow! error_count
-      p
+      grow! error_count
+      self
     end
 
 
-    EXP_TABLE = []
-    (0...8).each do |i|
-      EXP_TABLE.push 1 << i
+    EXP_TABLE = [1]
+    loop do
+      x = x_ = EXP_TABLE.last << 1
+      x &= 0xff
+      x ^= 0x1d if x != x_
+      break if x == EXP_TABLE.first
+      EXP_TABLE.push x
     end
-    (8...255).each do |i|
-      EXP_TABLE.push EXP_TABLE[i-4] ^ EXP_TABLE[i-5] ^ EXP_TABLE[i-6] ^ EXP_TABLE[i-8]
-    end
+    EXP_TABLE
+
 
     LOG_TABLE = [nil] * 256
     255.times do |i|
@@ -117,11 +123,11 @@ module QRest
 
     class <<self
 
-      def glog n
-        LOG_TABLE[n] or raise ArgumentError, "Argument is out of domain: glog(#{n})."
+      def gflog n
+        LOG_TABLE[n] or raise ArgumentError, "Argument is out of domain: gflog(#{n})."
       end
 
-      def gexp n
+      def gfexp n
         EXP_TABLE[n % 255]
       end
 
