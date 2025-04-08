@@ -12,6 +12,8 @@ module QRest
 
   class Modules
 
+    VERSIONS = 1..40
+
     POSITIONPATTERNLENGTH = (7 + 1) * 2 + 1
 
     ERRORCORRECTLEVEL = { l: 1, m: 0, q: 3, h: 2 }
@@ -67,7 +69,7 @@ module QRest
       place_position_probe_pattern 0, 0
       place_position_probe_pattern @fields.size - 7, 0
       place_position_probe_pattern 0, @fields.size - 7
-      place_position_adjust_pattern version
+      place_position_adjust_pattern @fields.size
       place_timing_pattern
       place_format_info test, (ERRORCORRECTLEVEL[ecl]<<3) | mask_pattern
       place_version_info version, test if version >= 7
@@ -165,58 +167,47 @@ module QRest
       end
     end
 
-    PATTERN_POSITION_TABLE = [
-      [],
-      [6, 18],
-      [6, 22],
-      [6, 26],
-      [6, 30],
-      [6, 34],
-      [6, 22, 38],
-      [6, 24, 42],
-      [6, 26, 46],
-      [6, 28, 50],
-      [6, 30, 54],
-      [6, 32, 58],
-      [6, 34, 62],
-      [6, 26, 46, 66],
-      [6, 26, 48, 70],
-      [6, 26, 50, 74],
-      [6, 30, 54, 78],
-      [6, 30, 56, 82],
-      [6, 30, 58, 86],
-      [6, 34, 62, 90],
-      [6, 28, 50, 72, 94],
-      [6, 26, 50, 74, 98],
-      [6, 30, 54, 78, 102],
-      [6, 28, 54, 80, 106],
-      [6, 32, 58, 84, 110],
-      [6, 30, 58, 86, 114],
-      [6, 34, 62, 90, 118],
-      [6, 26, 50, 74, 98, 122],
-      [6, 30, 54, 78, 102, 126],
-      [6, 26, 52, 78, 104, 130],
-      [6, 30, 56, 82, 108, 134],
-      [6, 34, 60, 86, 112, 138],
-      [6, 30, 58, 86, 114, 142],
-      [6, 34, 62, 90, 118, 146],
-      [6, 30, 54, 78, 102, 126, 150],
-      [6, 24, 50, 76, 102, 128, 154],
-      [6, 28, 54, 80, 106, 132, 158],
-      [6, 32, 58, 84, 110, 136, 162],
-      [6, 26, 54, 82, 110, 138, 166],
-      [6, 30, 58, 86, 114, 142, 170]
-    ]
 
-    MAX_VERSION = PATTERN_POSITION_TABLE.size
+    @adjust_pattern = {}
+
+    class <<self
+
+      ADJUST_FIRST = 6
+      def adjust_pattern_pos size
+        @adjust_pattern[ size] ||= begin
+          s = size - ADJUST_FIRST*2 - 1
+          if s < ADJUST_FIRST*2 then
+            []
+          else
+            kat = (s-1)/28
+            ds = [ 0]
+            case kat
+            when 0 then             ds.push s
+            when 1 then h = s / 2 ; ds.push h, h
+            else
+              28.step 20, -2 do |h|
+                m = s - kat*h
+                if m > h - [kat,3].max*2 then
+                  ds.push m, *([ h] * kat)
+                  break
+                end
+              end
+            end
+            p = ADJUST_FIRST
+            ds.map { |e| p = e + p }
+          end
+        end
+      end
+
+    end
 
     R_22 = -2..2
 
-    def place_position_adjust_pattern version
-      positions = PATTERN_POSITION_TABLE[ version - 1]
+    def place_position_adjust_pattern size
+      ps = self.class.adjust_pattern_pos size
       rd = R_22.minmax
-      positions.each do |row|
-        positions.each do |col|
+      ps.each do |row|
+        ps.each do |col|
           next unless @fields[ row][ col].nil?
           R_22.each do |r|
             pr = row + r

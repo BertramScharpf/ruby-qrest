@@ -27,24 +27,22 @@ module QRest
       Modules::ERRORCORRECTLEVEL[error_correct_level] or
         raise ArgumentError, "Unknown error correction level: #{level}"
       if version then
-        version <= Modules::MAX_VERSION or
-          raise ArgumentError, "Requested version exceeds maximum of #{Modules::MAX_VERSION}"
+        Modules::VERSIONS.include? version or
+          raise ArgumentError, "Requested version not in #{Modules::VERSIONS}"
       else
         if max_version then
-          max_version <= Modules::MAX_VERSION or
-            raise ArgumentError, "Maximum posible version is #{Modules::MAX_VERSION}"
+          Modules::VERSIONS.include? max_version or
+            raise ArgumentError, "Maximum version mot in #{Modules::VERSIONS}"
         else
-          max_version = Modules::MAX_VERSION
+          max_version = Modules::VERSIONS.end
         end
         mb = Modules::MAXBITS[error_correct_level]
-        version = 0
-        begin
-          version += 1
-          version <= max_version or
-            raise Error, "Data length exceeds maximum capacity of version #{max_version}"
-        end until (input.size version) <= mb[version - 1]
+        version = Modules::VERSIONS.find { |v|
+          v <= max_version or
+            raise Error, "Data length exceeds requested maximum version of #{max_version}"
+            (input.size v) <= mb[ v - 1]
+        }
       end
-
       data = (RSBlocks.get version, error_correct_level).create_data input
       @modules = Modules.create_best data, version, error_correct_level
     end
