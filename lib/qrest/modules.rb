@@ -194,7 +194,7 @@ module QRest
               end
             end
             p = ADJUST_FIRST
-            ds.map { |e| p = e + p }
+            ds.map { |e| p += e }
           end
         end
       end
