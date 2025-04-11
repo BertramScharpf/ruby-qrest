@@ -62,10 +62,13 @@ module QRest
             type or raise ArgumentError, "Not a valid segment type: #{mode}"
             type.new data
           else
+            r = nil
             @sub.each do |t|
-              break t.new data
-            rescue ArgumentError, NotImplementedError
+              r = t.new data
+              break
+            rescue ArgumentError, NotImplementedError, EncodingError
             end
+            r or raise "No appropriate segment type possible."
           end
         when Array then
           Multi.new data
@@ -163,23 +166,6 @@ module QRest
 
   end
 
-  class Bytes < Segment
-
-    NAME          = "8bit"
-    ID            = 4
-    BITS_FOR_MODE = [ 8, 16, 16]
-
-    def write_to buffer, version
-      super
-      @data.each_byte do |b|
-        buffer.put b, 8
-      end
-    end
-
-    def cbe ; [1, 8, 0] ; end
-
-  end
-
   class Kanji < Segment
 
     NAME          = "kanji"
@@ -206,29 +192,30 @@ module QRest
 
   end
 
-  class ECI < Segment
+  class Bytes < Segment
 
-    NAME          = "eci"
-    ID            = 7
-    BITS_FOR_MODE = [ 0, 0, 0]
+    NAME          = "8bit"
+    ID            = 4
+    BITS_FOR_MODE = [ 8, 16, 16]
+
+    @strict = false
+    class <<self
+      attr_accessor :strict
+    end
 
     def initialize data
+      data = data.encode Encoding::ISO8859_1 if self.class.strict
       super
-      not_implemented
     end
 
     def write_to buffer, version
       super
-      not_implemented
+      @data.each_byte do |b|
+        buffer.put b, 8
+      end
     end
 
-    def cbe ; not_implemented ; end
-
-    private
-
-    def not_implemented
-      raise NotImplementedError, "Not implemented yet. Please contribute."
-    end
+    def cbe ; [1, 8, 0] ; end
 
   end
 
