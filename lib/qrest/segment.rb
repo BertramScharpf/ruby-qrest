@@ -14,7 +14,7 @@ module QRest
     end
 
     def write_to buffer, version
-      buffer.put 1<<self.class::ID, 4
+      buffer.put self.class::ID, 4
       buffer.put @data.bytesize, (get_length_in_bits version)
     end
 
@@ -108,7 +108,7 @@ module QRest
   class Numeric < Segment
 
     NAME          = "number"
-    ID            = 0
+    ID            = 1
     BITS_FOR_MODE = [10, 12, 14]
 
     def initialize data
@@ -132,7 +132,7 @@ module QRest
   class Alphanumeric < Segment
 
     NAME          = "alphanumeric"
-    ID            = 1
+    ID            = 2
     BITS_FOR_MODE = [ 9, 11, 13]
 
     ALPHANUMERIC, = [
@@ -163,10 +163,27 @@ module QRest
 
   end
 
+  class Bytes < Segment
+
+    NAME          = "8bit"
+    ID            = 4
+    BITS_FOR_MODE = [ 8, 16, 16]
+
+    def write_to buffer, version
+      super
+      @data.each_byte do |b|
+        buffer.put b, 8
+      end
+    end
+
+    def cbe ; [1, 8, 0] ; end
+
+  end
+
   class Kanji < Segment
 
     NAME          = "kanji"
-    ID            = nil  # ???
+    ID            = 8
     BITS_FOR_MODE = [ 8, 10, 12]
 
     def initialize data
@@ -189,20 +206,29 @@ module QRest
 
   end
 
-  class Bytes < Segment
+  class ECI < Segment
 
-    NAME          = "8bit"
-    ID            = 2
-    BITS_FOR_MODE = [ 8, 16, 16]
+    NAME          = "eci"
+    ID            = 7
+    BITS_FOR_MODE = [ 0, 0, 0]
+
+    def initialize data
+      super
+      not_implemented
+    end
 
     def write_to buffer, version
       super
-      @data.each_byte do |b|
-        buffer.put b, 8
-      end
+      not_implemented
     end
 
-    def cbe ; [1, 8, 0] ; end
+    def cbe ; not_implemented ; end
+
+    private
+
+    def not_implemented
+      raise NotImplementedError, "Not implemented yet. Please contribute."
+    end
 
   end
 
