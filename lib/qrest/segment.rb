@@ -13,7 +13,7 @@ module QRest
       @data = data
     end
 
-    def write buffer, version
+    def write_to buffer, version
       buffer.put 1<<self.class::ID, 4
       buffer.put @data.bytesize, (get_length_in_bits version)
     end
@@ -94,8 +94,8 @@ module QRest
       }
     end
 
-    def write buffer, version
-      @segs.each { |s| s.write buffer, version }
+    def write_to buffer, version
+      @segs.each { |s| s.write_to buffer, version }
     end
 
     def size version
@@ -118,7 +118,7 @@ module QRest
 
     NUMBER_LENGTH = { 3 => 10, 2 => 7, 1 => 4 }
 
-    def write buffer, version
+    def write_to buffer, version
       super
       @data.scan /\d{1,3}/ do |chars|
         buffer.put chars.to_i, NUMBER_LENGTH[ chars.length]
@@ -146,7 +146,7 @@ module QRest
       super
     end
 
-    def write buffer, version
+    def write_to buffer, version
       super
       @data.scan /(.)(.)?/ do |c,d|
         val = ALPHANUMERIC[ c]
@@ -174,7 +174,7 @@ module QRest
       not_implemented
     end
 
-    def write buffer, version
+    def write_to buffer, version
       super
       not_implemented
     end
@@ -195,7 +195,7 @@ module QRest
     ID            = 2
     BITS_FOR_MODE = [ 8, 16, 16]
 
-    def write buffer, version
+    def write_to buffer, version
       super
       @data.each_byte do |b|
         buffer.put b, 8

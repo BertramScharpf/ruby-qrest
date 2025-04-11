@@ -43,8 +43,8 @@ module QRest
             (input.size v) <= mb[ v - 1]
         }
       end
-      data = (RSBlocks.get version, error_correct_level).create_data input
-      @modules = Modules.create_best data, version, error_correct_level
+      data = RSData.new version, error_correct_level, input
+      @modules = Modules.create_best data
     end
 
     def to_s dark: nil, light: nil, quiet_size: nil

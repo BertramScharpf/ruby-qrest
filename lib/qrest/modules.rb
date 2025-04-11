@@ -51,29 +51,29 @@ module QRest
         dark_ratio:  2,
       }
 
-      def create_best data, version, error_correct_level
-        demerits, pattern = nil, 0
+      def create_best data
+        demerits, pattern = nil, nil
         MASK_PATTERNS.length.times { |i|
-          test = new data, version, error_correct_level, true, i
+          test = new data, i, true
           d = test.demerits.total **WEIGHTS
-          demerits, pattern = d, i if not demerits or demerits > d
+          demerits, pattern = d, i if not pattern or demerits > d
         }
-        new data, version, error_correct_level, false, pattern
+        new data, pattern, false
       end
 
     end
 
-    def initialize data, version, ecl, test, mask_pattern
-      count = version * 4 + POSITIONPATTERNLENGTH
+    def initialize data, mask_pattern, test
+      count = data.version * 4 + POSITIONPATTERNLENGTH
       @fields = Array.new count do Array.new count end
       place_position_probe_pattern 0, 0
       place_position_probe_pattern @fields.size - 7, 0
       place_position_probe_pattern 0, @fields.size - 7
       place_position_adjust_pattern @fields.size
       place_timing_pattern
-      place_format_info test, (ERRORCORRECTLEVEL[ecl]<<3) | mask_pattern
-      place_version_info version, test if version >= 7
-      bs = BitStream.new data
+      place_format_info test, (ERRORCORRECTLEVEL[data.error_correct_level]<<3) | mask_pattern
+      place_version_info test, data.version
+      bs = BitStream.new data.data
       walk_fields mask_pattern do bs.get end
       @demerits = Demerits.new @fields if test
     end
@@ -236,7 +236,7 @@ module QRest
           when ...8 then 1
           else           @fields.size - 15
           end
-        @fields[ r+i][ 8] = mod
+        @fields[ r + i][ 8] = mod
         c =
           case i
           when ...8 then @fields.size
@@ -249,12 +249,13 @@ module QRest
       @fields[ @fields.size - 8][ 8] = !test
     end
 
-    def place_version_info version, test
+    def place_version_info test, version
+      return if version < 7
       bits = Bch.version version
       18.times do |i|
         id, im = i.divmod 3
         im += @fields.size - 8 - 3
-        @fields[ id][ im] = @fields[ im][ id] = !test && (bits & 1) == 1
+        @fields[ id][ im] = @fields[ im][ id] = !test && bits.odd?
         bits >>= 1
       end
     end
