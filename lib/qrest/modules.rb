@@ -40,7 +40,7 @@ module QRest
       proc { |i,j| ((i * j) % 3 + (i + j) % 2) % 2 },
     ]
 
-    attr_reader :version, :count, :fields, :demerits
+    attr_reader :version, :count, :fields
 
     class <<self
 
@@ -54,16 +54,16 @@ module QRest
       def create_best data
         demerits, pattern = nil, nil
         MASK_PATTERNS.length.times { |i|
-          test = new data, i, true
-          d = test.demerits.total **WEIGHTS
+          t = ModulesTest.new data, i
+          d = t.demerits.total **WEIGHTS
           demerits, pattern = d, i if not pattern or demerits > d
         }
-        new data, pattern, false
+        new data, pattern
       end
 
     end
 
-    def initialize data, mask_pattern, test
+    def initialize data, mask_pattern
       count = data.version * 4 + POSITIONPATTERNLENGTH
       @fields = Array.new count do Array.new count end
       place_position_probe_pattern 0, 0
@@ -71,11 +71,10 @@ module QRest
       place_position_probe_pattern 0, @fields.size - 7
       place_position_adjust_pattern @fields.size
       place_timing_pattern
-      place_format_info test, (ERRORCORRECTLEVEL[data.error_correct_level]<<3) | mask_pattern
-      place_version_info test, data.version
+      place_format_info (ERRORCORRECTLEVEL[data.error_correct_level]<<3) | mask_pattern
+      place_version_info data.version
       bs = BitStream.new data.data
       walk_fields mask_pattern do bs.get end
-      @demerits = Demerits.new @fields if test
     end
 
     def inspect
@@ -204,7 +203,7 @@ module QRest
     R_22 = -2..2
 
     def place_position_adjust_pattern size
-      ps = self.class.adjust_pattern_pos size
+      ps = Modules.adjust_pattern_pos size
       rd = R_22.minmax
       ps.each do |row|
         ps.each do |col|
@@ -222,40 +221,45 @@ module QRest
 
     def place_timing_pattern
       (8...@fields.size-8).each do |i|
+        next unless @fields[ i][ 6].nil?
         @fields[ i][ 6] = @fields[ 6][ i] = i.even?
       end
     end
 
-    def place_format_info test, ecl
+    def set_bit n
+      n.odd?
+    end
+
+    def place_format_info ecl
       bits = Bch.format_info ecl
       15.times do |i|
-        mod = !test && bits.odd?
+        m = set_bit bits
         r =
           case i
           when ...6 then 0
           when ...8 then 1
           else           @fields.size - 15
           end
-        @fields[ r + i][ 8] = mod
+        @fields[ r + i][ 8] = m
         c =
           case i
           when ...8 then @fields.size
           when ...9 then 16
           else           15
           end
-        @fields[ 8][ c - i - 1] = mod
+        @fields[ 8][ c - i - 1] = m
         bits >>= 1
       end
-      @fields[ @fields.size - 8][ 8] = !test
+      @fields[ @fields.size - 8][ 8] = set_bit 1
     end
 
-    def place_version_info test, version
+    def place_version_info version
       return if version < 7
       bits = Bch.version version
       18.times do |i|
         id, im = i.divmod 3
         im += @fields.size - 8 - 3
-        @fields[ id][ im] = @fields[ im][ id] = !test && bits.odd?
+        @fields[ id][ im] = @fields[ im][ id] = set_bit bits
         bits >>= 1
       end
     end
@@ -286,6 +290,19 @@ module QRest
         c2 -= 1 if c2 == 6
       end
     end
+
+  end
+
+  class ModulesTest < Modules
+
+    attr_reader :demerits
+
+    def initialize data, mask_pattern
+      super
+      @demerits = Demerits.new @fields
+    end
+
+    def set_bit _ ; false ; end
 
   end
 
