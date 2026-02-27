@@ -16,7 +16,7 @@ module QRest
     def total **weigths
       weigths.inject 0 do |sum,(k,v)|
         e = ([*(send k)].zip [*v]).inject 0 do |s,(r,f)| s += r*f end
-        sum += e.round
+        sum + e.round
       end
     end
 
